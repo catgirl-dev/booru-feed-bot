@@ -15,7 +15,7 @@ def enqueue_urls() -> None:
             tags: list = list(TagsArchive.select().where(TagsArchive.chat_id == chat_id))
 
             for tag in tags:
-                url: str = (f'https://danbooru.donmai.us/posts.json?tags=date:>'
+                url: str = (f'https://kagamihara.donmai.us/posts.json?tags=date:>'
                             f'{str(tag.last_post_date)} {str(tag.tag)}')
 
                 existing_url = UrlQueue.select().where(
