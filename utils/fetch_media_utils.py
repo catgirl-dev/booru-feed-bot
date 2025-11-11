@@ -14,6 +14,7 @@ from utils.resize_image import resize_problematic_image
 
 
 async def construct_url(url_record) -> Tuple[str, str]:
+    """Формирует запрос к Danbooru на основе записи из очереди URL"""
     url: str = url_record.url
     tag: str = url_record.tag
     logging.info(f"Запрос к Danbooru: {url}")
@@ -22,13 +23,14 @@ async def construct_url(url_record) -> Tuple[str, str]:
 
 
 def construct_isoformat_date(post) -> str:
+    """Преобразует дату поста в формат ISO-8601"""
     iso_post_date: datetime = datetime.fromisoformat(post['created_at'])
     formatted_post_date: str = str(iso_post_date.strftime("%Y-%m-%dT%H:%M:%S"))
     return formatted_post_date
 
 
 async def fetch_url_data(url: str, chat_id: int) -> Optional[dict]:
-    """ Отправляет для Данбуру запрос, получает ответ """
+    """Выполняет HTTP-запрос к Danbooru и возвращает JSON-ответ"""
     async with ClientSession() as session:
         try:
             async with session.get(url) as response:
@@ -48,7 +50,8 @@ async def fetch_url_data(url: str, chat_id: int) -> Optional[dict]:
 
 
 async def handle_image_resize_error(command, error: TelegramBadRequest) -> None:
-    """ Ресайзит изображение при ошибке отправки в Телеграм чат """
+    """Обрабатывает ошибку TelegramBadRequest при отправке изображения.
+    Пытается изменить размер изображения и повторно отправить его"""
     logging.error(f"Ошибка при отправке медиафайла: {error}")
 
     if command.attachmentType != AttachmentType.PHOTO:

@@ -10,6 +10,11 @@ from configuration.logging import setup_logging
 
 
 async def main():
+    """
+    Точка входа в приложение.
+    Настраивает логирование, запускает планировщик,
+    регистрирует роутеры и запускает polling бота
+    """
     setup_logging()
     scheduler.start()
 

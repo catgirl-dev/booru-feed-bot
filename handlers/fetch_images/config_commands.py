@@ -12,11 +12,13 @@ from filters.is_group import ChatTypeFilter
 from handlers.fetch_images.fetch_media import fetch_and_send_media
 from utils.queue import enqueue_urls
 
-fetch_config = Router()
+
+fetch_config: Router = Router()
 
 
 @fetch_config.message(Command('start_fetch'), ChatTypeFilter(), IsAdmin())
 async def start_fetch(message: Message):
+    """Запускает поиск и отправку новых медиафайлов"""
     logging_user_id = message.from_user.id
     logging.info(f'Бот запущен пользователем с ID: {logging_user_id}')
 
@@ -74,6 +76,7 @@ async def start_fetch(message: Message):
 
 @fetch_config.message(Command('stop_fetch'), ChatTypeFilter(), IsAdmin())
 async def stop_fetch(message: Message):
+    """Останавливает поиск и отправку новых медиафайлов"""
     job_id = f'fetch_media_{message.chat.id}'
     existing_job = scheduler.get_job(job_id)
 
@@ -88,6 +91,7 @@ async def stop_fetch(message: Message):
 
 @fetch_config.message(Command('show_tags'), ChatTypeFilter(), IsAdmin())
 async def show_tags(message: Message):
+    """Отправляет список тегов для данного чата"""
     tags = TagsArchive.select().where(TagsArchive.chat_id == message.chat.id)
 
     if not tags:
@@ -111,6 +115,7 @@ async def show_tags(message: Message):
 
 @fetch_config.message(Command('add_tag'), ChatTypeFilter(), IsAdmin())
 async def add_tag(message: Message, command: CommandObject):
+    """Добавляет один или множество тегов"""
     command_args: str = command.args
 
     if not command_args:
@@ -137,7 +142,8 @@ async def add_tag(message: Message, command: CommandObject):
         TagsArchive.create(
             chat_id=message.chat.id,
             tag=tag,
-            last_post_date=datetime.now(timezone(timedelta(hours=-5))).strftime("%Y-%m-%dT%H:%M:%S")
+            last_post_date=datetime.now(
+                timezone(timedelta(hours=-5))).strftime("%Y-%m-%dT%H:%M:%S")
         )
 
     await message.reply(
@@ -149,6 +155,7 @@ async def add_tag(message: Message, command: CommandObject):
 
 @fetch_config.message(Command('remove_tag'), ChatTypeFilter(), IsAdmin())
 async def remove_tag(message: Message, command: CommandObject):
+    """Удаляет один или множество тегов"""
     command_args: str = command.args
 
     if not command_args:
@@ -185,12 +192,15 @@ async def remove_tag(message: Message, command: CommandObject):
 
 @fetch_config.message(Command('censor_status'), ChatTypeFilter(), IsAdmin())
 async def censor_status(message: Message, command: CommandObject):
+    """Позволяет выбрать настройки цензуры.
+    0 — выключить цензуру, 1 — включить, 2 — не присылать 18+"""
     command_args: str = command.args
     chat_id: int = message.chat.id
 
     if not command_args or command_args not in ['0', '1', '2']:
         await message.reply(
-            'Пожалуйста, укажите 1 (включить цензуру) или 0 (выключить цензуру).'
+            'Пожалуйста, укажите 1 (включить цензуру), 0 (выключить цензуру),'
+            '2 (не присылать 18+ вообще). '
             'Пример для выключения цензуры: /censor_status 0'
         )
         logging.error('Цензура указана неправильно')
@@ -199,21 +209,25 @@ async def censor_status(message: Message, command: CommandObject):
     status_value = int(command_args)
 
     if status_value == 0:
-        CensorStatus.update(status=status_value).where(CensorStatus.chat_id == chat_id).execute()
+        CensorStatus.update(
+            status=status_value).where(CensorStatus.chat_id == chat_id).execute()
         await message.reply('Цензура выключена.')
 
     elif status_value == 1:
-        CensorStatus.update(status=status_value).where(CensorStatus.chat_id == chat_id).execute()
+        CensorStatus.update(
+            status=status_value).where(CensorStatus.chat_id == chat_id).execute()
         await message.reply('Цензура включена.')
 
     elif status_value == 2:
-        CensorStatus.update(status=status_value).where(CensorStatus.chat_id == chat_id).execute()
+        CensorStatus.update(
+            status=status_value).where(CensorStatus.chat_id == chat_id).execute()
         await message.reply('Поиск изображений с рейтингом 18+ выключен.')
 
 
 
 @fetch_config.message(Command('change_interval'), ChatTypeFilter(), IsAdmin())
 async def change_interval(message: Message, command: CommandObject):
+    """Позволяет настроить интервал, с которым будет осуществляться отправка новых медиа"""
     command_args: str = command.args
 
     if not command_args or not command_args.isdigit() or command_args == '0':
