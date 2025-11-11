@@ -10,6 +10,7 @@ from database.models import IntervalConfig, TagsArchive, CensorStatus
 from filters.is_admin import IsAdmin
 from filters.is_group import ChatTypeFilter
 from handlers.fetch_images.fetch_media import fetch_and_send_media
+from utils.add_tag_utils import parse_args
 from utils.queue import enqueue_urls
 
 
@@ -116,23 +117,17 @@ async def show_tags(message: Message):
 @fetch_config.message(Command('add_tag'), ChatTypeFilter(), IsAdmin())
 async def add_tag(message: Message, command: CommandObject):
     """Добавляет один или множество тегов"""
-    command_args: str = command.args
+    start_date, tags_to_add = parse_args(command.args)
 
-    if not command_args:
-        await message.reply(
-            'Пожалуйста, введите хотя бы один тег!'
-        )
+    if not tags_to_add:
+        await message.reply('Пожалуйста, введите хотя бы один тег!')
         return
 
-    tags_to_add = command_args.strip().split(' ')
-
     for tag in tags_to_add:
-        existing_tag = TagsArchive.select().where(
+        if TagsArchive.select().where(
             TagsArchive.chat_id == message.chat.id,
             TagsArchive.tag == tag
-        )
-
-        if existing_tag:
+        ).exists():
             await message.reply(
                 f'Тег *{tag}* уже существует в базе данных!',
                 parse_mode='Markdown'
@@ -142,13 +137,12 @@ async def add_tag(message: Message, command: CommandObject):
         TagsArchive.create(
             chat_id=message.chat.id,
             tag=tag,
-            last_post_date=datetime.now(
-                timezone(timedelta(hours=-5))).strftime("%Y-%m-%dT%H:%M:%S")
+            last_post_date=start_date.strftime("%Y-%m-%dT%H:%M:%S")
         )
 
     await message.reply(
-        f'Следующие теги были успешно добавлены: '
-        f'{", ".join([f"*{tag}*" for tag in tags_to_add])}',
+        f'Добавлены теги с датой начала *{start_date.strftime("%Y-%m-%d")}*: '
+        f'{", ".join([f"*{t}*" for t in tags_to_add])}',
         parse_mode='Markdown'
     )
 
