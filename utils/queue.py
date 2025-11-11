@@ -7,6 +7,7 @@ from database.models import UrlQueue, TagsArchive
 
 
 def enqueue_urls() -> None:
+    """Добавляет новые URL-адреса в очередь для каждого чата и каждого тега"""
     try:
         chat_ids: Query = TagsArchive.select(TagsArchive.chat_id).distinct()
         chat_id_list: list[int] = [int(chat_id.chat_id) for chat_id in chat_ids]
@@ -39,6 +40,8 @@ def enqueue_urls() -> None:
         logging.error(f'Ошибка при добавлении URL в очередь: {e}')
 
 def dequeue_and_get_urls(chat_id: int) -> Optional[List[UrlQueue]]:
+    """Получает список URL-адресов из очереди для заданного чата и помечает их
+    как "в обработке" (status=1)"""
     urls_from_db: list[UrlQueue] = list(UrlQueue.select().where(
         UrlQueue.chat_id == chat_id, UrlQueue.status == 0)
     )

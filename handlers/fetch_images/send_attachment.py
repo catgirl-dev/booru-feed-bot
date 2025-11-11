@@ -8,13 +8,16 @@ from configuration.environment import bot
 from database.models import CensorStatus
 
 
+
 class AttachmentType(Enum):
+    """Типы медиафайлов"""
     VIDEO = 1
     GIF = 2
     PHOTO = 3
 
 
 class SendAttachCommand:
+    """Команда для отправки медиафайла в чат """
     def __init__(self, attachment_type: AttachmentType, file: Union[InputFile, str], has_spoiler: bool, chat_id: any):
         self.attachmentType = attachment_type
         self.file = file
@@ -23,12 +26,14 @@ class SendAttachCommand:
 
 
 class CensorLevel(Enum):
+    """Статусы цензуры. 0 — выключить, 1 — включить, 2 — не присылать 18+"""
     NO_CENSOR = 0
     PARTIAL_CENSOR = 1
     FULL_CENSOR = 2
 
 
 def get_send_command(post: any, chat_id: any) -> Union[SendAttachCommand, None]:
+    """Проверяет статус цензуры и формирует команду для отправки медиафайла"""
     try:
         censor_status_found = CensorStatus.select().where(CensorStatus.chat_id == chat_id).first()
     except Exception as e:
@@ -69,6 +74,7 @@ def get_send_command(post: any, chat_id: any) -> Union[SendAttachCommand, None]:
 
 
 async def send_attachment(command: SendAttachCommand):
+    """Отправляет медиафайл в чат согласно типу вложения"""
     match command.attachmentType:
         case(AttachmentType.VIDEO):
             await bot.send_video(

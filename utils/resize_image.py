@@ -6,6 +6,8 @@ import aiohttp
 from PIL import Image
 
 async def resize_problematic_image(image_url: str) -> Union[BytesIO, None]:
+    """Загружает изображение по URL и изменяет его размер, чтобы максимальная
+    ширина или высота не превышала 1280 пикселей"""
     async with aiohttp.ClientSession() as session:
         async with session.get(image_url) as response:
             if response.status != 200:
