@@ -5,14 +5,12 @@ from database.models import TagsArchive, PostIds, UrlQueue
 
 
 def get_chat_ids() -> List[int]:
-    """Возвращает список chat_id из таблицы TagsArchive"""
     chat_ids = TagsArchive.select(TagsArchive.chat_id).distinct()
     chat_id_list: list[int] = [int(chat_id.chat_id) for chat_id in chat_ids]
     return chat_id_list
 
 
 async def update_database(chat_id: int, tag, post, formatted_post_date: str, url: str) -> None:
-    """Обновляет данные в базе после успешной публикации поста"""
     try:
         existing_tag = TagsArchive.get_or_none(
             TagsArchive.chat_id == chat_id,

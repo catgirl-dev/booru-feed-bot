@@ -11,12 +11,10 @@ from utils.fetch_media_utils import construct_url, construct_isoformat_date, fet
     handle_image_resize_error
 from utils.queue import dequeue_and_get_urls
 
-
-fetch_and_send: Router = Router()
+fetch_and_send = Router()
 
 
 async def fetch_and_send_media() -> None:
-    """Поиск и отправка новых медиа"""
     chat_id_list = get_chat_ids()
 
     for chat_id in chat_id_list:
