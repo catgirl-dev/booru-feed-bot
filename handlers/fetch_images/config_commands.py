@@ -116,7 +116,6 @@ async def show_tags(message: Message):
 
 @fetch_config.message(Command('add_tag'), ChatTypeFilter(), IsAdmin())
 async def add_tag(message: Message, command: CommandObject):
-    """Добавляет один или множество тегов"""
     start_date, tags_to_add = parse_args(command.args)
 
     if not tags_to_add:
@@ -141,7 +140,7 @@ async def add_tag(message: Message, command: CommandObject):
         )
 
     await message.reply(
-        f'Добавлены теги с датой начала *{start_date.strftime("%Y-%m-%d")}*: '
+        f'Добавлены теги с датой начала поиска *{start_date.strftime("%Y-%m-%d")}*: '
         f'{", ".join([f"*{t}*" for t in tags_to_add])}',
         parse_mode='Markdown'
     )
