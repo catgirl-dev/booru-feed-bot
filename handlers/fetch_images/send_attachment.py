@@ -10,7 +10,7 @@ from configuration.environment import bot
 from database.models import CensorStatus
 
 
-
+# TODO: добавить обработку события удаления бота из чата
 class AttachmentType(Enum):
     """Типы медиафайлов"""
     VIDEO = 1
@@ -122,6 +122,11 @@ async def send_attachment(command: SendAttachCommand, max_retries: int = 3):
                 logging.error(
                     f"Неверный тип контента для чата {command.chat_id}: {command.file}"
                 )
+                return
+
+            if "kicked" in error_msg or "blocked" in error_msg:
+                logging.error(f"Бот был удалён из чата {command.chat_id}. Очищаем данные...")
+                # добавить обработку события
                 return
 
             elif "failed to get http url content" in error_msg:
