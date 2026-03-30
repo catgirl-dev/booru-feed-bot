@@ -77,17 +77,31 @@ async def start_fetch(message: Message):
 
 @fetch_config.message(Command('stop_fetch'), ChatTypeFilter(), IsAdmin())
 async def stop_fetch(message: Message):
-    """Останавливает поиск и отправку новых медиафайлов"""
-    job_id = f'fetch_media_{message.chat.id}'
-    existing_job = scheduler.get_job(job_id)
+    """ Останавливает поиск и отправку новых медиафайлов """
+    fetch_job_id = f'fetch_media_{message.chat.id}'
+    queue_job_id = f'enqueue_urls_{message.chat.id}'
 
-    if not existing_job:
-        await message.reply('Поиск медиа не был запущен для этого чата.')
+    fetch_job = scheduler.get_job(fetch_job_id)
+    queue_job = scheduler.get_job(queue_job_id)
+
+    if not fetch_job and not queue_job:
+        await message.reply('Поиск медиа не был запущен для этого чата')
         return
 
-    scheduler.remove_job(job_id)
+    if fetch_job:
+        scheduler.remove_job(fetch_job_id)
+        logging.info(f'Удалена джоба {fetch_job_id}')
 
-    await message.reply('Поиск новых медиа будет остановлен.')
+    if queue_job:
+        scheduler.remove_job(queue_job_id)
+        logging.info(f'Удалена джоба {queue_job_id}')
+
+    from database.models import UrlQueue
+    deleted_count = UrlQueue.delete().where(UrlQueue.chat_id == message.chat.id).execute()
+    if deleted_count:
+        logging.info(f'Удалено {deleted_count} URL из очереди для чата {message.chat.id}')
+
+    await message.reply('Все джобы по поиску медиа удалены')
 
 
 @fetch_config.message(Command('show_tags'), ChatTypeFilter(), IsAdmin())
