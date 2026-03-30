@@ -1,7 +1,9 @@
 import logging
+import asyncio
 from enum import Enum
 from typing import Union
 
+from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
 from aiogram.types import InputFile
 
 from configuration.environment import bot
@@ -73,24 +75,72 @@ def get_send_command(post: any, chat_id: any) -> Union[SendAttachCommand, None]:
     return SendAttachCommand(att_type, post['file_url'], has_spoiler, chat_id)
 
 
-async def send_attachment(command: SendAttachCommand):
-    """Отправляет медиафайл в чат согласно типу вложения"""
-    match command.attachmentType:
-        case(AttachmentType.VIDEO):
-            await bot.send_video(
-                chat_id=command.chat_id,
-                video=command.file,
-                has_spoiler=command.has_spoiler,
+async def send_attachment(command: SendAttachCommand, max_retries: int = 3):
+    """
+    Отправляет медиафайл по типу вложения
+    с обработкой flood control и ретраями
+    """
+    await asyncio.sleep(0.5)
+
+    for attempt in range(max_retries):
+        try:
+            match command.attachmentType:
+                case AttachmentType.VIDEO:
+                    await bot.send_video(
+                        chat_id=command.chat_id,
+                        video=command.file,
+                        has_spoiler=command.has_spoiler,
+                    )
+                case AttachmentType.GIF:
+                    await bot.send_animation(
+                        chat_id=command.chat_id,
+                        gif=command.file,
+                        has_spoiler=command.has_spoiler,
+                    )
+                case AttachmentType.PHOTO:
+                    await bot.send_photo(
+                        chat_id=command.chat_id,
+                        photo=command.file,
+                        has_spoiler=command.has_spoiler,
+                    )
+            await asyncio.sleep(1.0)
+            return
+
+        except TelegramRetryAfter as e:
+            wait_time = e.retry_after
+            logging.warning(
+                f"Flood control! Чат {command.chat_id}: ждём {wait_time} секунд "
+                f"(попытка {attempt + 1}/{max_retries})"
             )
-        case(AttachmentType.GIF):
-            await bot.send_animation(
-                chat_id=command.chat_id,
-                gif=command.file,
-                has_spoiler=command.has_spoiler,
-            )
-        case(AttachmentType.PHOTO):
-            await bot.send_photo(
-                chat_id=command.chat_id,
-                photo=command.file,
-                has_spoiler=command.has_spoiler,
-            )
+            await asyncio.sleep(wait_time + 0.5)
+            continue
+
+        except TelegramBadRequest as e:
+            error_msg = str(e).lower()
+
+            if "wrong type of the web page content" in error_msg:
+                logging.error(
+                    f"Неверный тип контента для чата {command.chat_id}: {command.file}"
+                )
+                return
+
+            elif "failed to get http url content" in error_msg:
+                logging.error(
+                    f"Не удалось загрузить контент для чата {command.chat_id}: {command.file}. "
+                    f"Файл может быть удалён или недоступен."
+                )
+                return
+            else:
+                logging.error(f"BadRequest при отправке в чат {command.chat_id}: {e}")
+
+            return
+
+        except Exception as e:
+            logging.error(f"Неожиданная ошибка при отправке в чат {command.chat_id}: {e}")
+            if attempt == max_retries - 1:
+                return
+            wait_time = 2 ** attempt
+            logging.info(f"Повторная попытка через {wait_time} секунд")
+            await asyncio.sleep(wait_time)
+
+    logging.error(f"Не удалось отправить медиа после {max_retries} попыток")
