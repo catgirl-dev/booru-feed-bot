@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 from typing import List, Union, Optional
 
 from peewee import Query
@@ -25,12 +26,23 @@ def enqueue_urls() -> None:
                 ).first()
 
                 if existing_url:
-                    logging.debug(f'URL уже в очереди или обработан: {url}')
-
-                    if existing_url.status == 1:
+                    if existing_url.url != url:
+                        existing_url.url = url
                         existing_url.status = 0
                         existing_url.save()
-                        logging.info(f'URL восстановлен в очередь: {url}')
+                        logging.info(f'URL обновлён для тега {tag.tag}: {url}')
+                    elif existing_url.status == 1:
+                        if hasattr(existing_url, 'updated_at'):
+                            timeout = datetime.now() - timedelta(minutes=10)
+                            if existing_url.updated_at < timeout:
+                                existing_url.status = 0
+                                existing_url.save()
+                                logging.info(
+                                    f'URL восстановлен для тега {tag.tag} (завис в обработке)')
+                        else:
+                            existing_url.status = 0
+                            existing_url.save()
+                            logging.info(f'URL восстановлен для тега {tag.tag} (сброс статуса)')
                     continue
 
                 UrlQueue.create(chat_id=chat_id, url=url, tag=tag.tag, status=0)

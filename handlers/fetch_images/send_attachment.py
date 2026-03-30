@@ -94,7 +94,7 @@ async def send_attachment(command: SendAttachCommand, max_retries: int = 3):
                 case AttachmentType.GIF:
                     await bot.send_animation(
                         chat_id=command.chat_id,
-                        gif=command.file,
+                        animation=command.file,
                         has_spoiler=command.has_spoiler,
                     )
                 case AttachmentType.PHOTO:
